@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Charm Stack">
+<meta name="theme-color" content="#1a0b2e">
+<title>Charm Stack</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="stat"><span class="lbl">Score</span><span id="score">0</span></div>
+  <div class="stat"><span class="lbl">Best</span><span id="best">0</span></div>
+  <div class="stat"><span class="lbl">Level</span><span id="lvl">1</span></div>
+  <div class="stat"><span class="lbl">Fingers</span><span id="touches">0</span></div>
+</div>
+
+<button id="raise" aria-label="Raise the stack">▲ Raise</button>
+
+<div id="start" class="overlay">
+  <h1>Charm Stack</h1>
+  <p>Drag a charm left or right to swap it with its neighbour.</p>
+  <p>Line up <b>3 or more</b> of the same charm to clear them.</p>
+  <p>Don't let the stack reach the top!</p>
+  <p class="small">Use as many fingers as you like. Keyboard: arrows, Space to swap, X to raise.</p>
+  <button id="play">Tap to Play</button>
+  <p class="hint" id="ioshint">On iPhone: tap <b>Share</b> → <b>Add to Home Screen</b> to play full screen.</p>
+</div>
+
+<div id="over" class="overlay hidden">
+  <h2>The stack is full!</h2>
+  <p id="final"></p>
+  <button id="again">Play again</button>
+</div>
+
+<div id="nogl" class="overlay hidden">
+  <h2>Sorry!</h2>
+  <p>This browser doesn't support WebGL 2, which the game needs.</p>
+</div>
+
+<script>
+// Show script errors on screen (handy when testing on a phone with no console).
+window.onerror = function (msg, src, line) {
+  var d = document.createElement('pre');
+  d.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99;margin:0;padding:8px;background:#600;color:#fff;font-size:12px;white-space:pre-wrap';
+  d.textContent = 'Error: ' + msg + (line ? ' (line ' + line + ')' : '');
+  document.body.appendChild(d);
+};
+</script>
+<script src="logic.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
