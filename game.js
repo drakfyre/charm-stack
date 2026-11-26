@@ -259,6 +259,7 @@
     state = 'play';
     $('over').classList.add('hidden');
     showPaused(false);
+    armBackTrap();
   }
 
   // ---------- Pause (the board stays visible on purpose: peeking is allowed!) ----------
@@ -268,18 +269,41 @@
     pauseBtn.innerHTML = on ? '&#9654;' : '&#10074;&#10074;';
     pauseBtn.setAttribute('aria-label', on ? 'Resume' : 'Pause');
     $('pausedTag').classList.toggle('hidden', !on);
+    if (!on) $('pausedTag').classList.remove('backed');
   }
   function setPaused(on) {
     if (on && state === 'play') { state = 'paused'; for (var id in pointers) pointers[id].cell = null; }
-    else if (!on && state === 'paused') { state = 'play'; }
+    else if (!on && state === 'paused') { state = 'play'; armBackTrap(); }
     else return;
     showPaused(state === 'paused');
   }
   pauseBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); });
   pauseBtn.addEventListener('pointerup', function (e) {
     e.preventDefault(); initAudio();
+    if (state === 'paused' && wasFullscreen) goFullscreen();
     setPaused(state === 'play');
   });
+
+  // ---------- Back swipe / back button guard ----------
+  // A web page can't switch off Android's back gesture, so during a game we keep one extra history
+  // entry. A back swipe uses it up and pauses the game instead of leaving. Resuming re-arms it
+  // (it must be re-armed from a tap: Chrome skips history entries added without one).
+  // Backing again while paused really leaves, so nobody gets stuck.
+  var trapArmed = false, wasFullscreen = false;
+  function armBackTrap() {
+    if (trapArmed || !window.history || !history.pushState) return;
+    try { history.pushState({ charmStack: true }, ''); trapArmed = true; } catch (e) {}
+  }
+  window.addEventListener('popstate', function () {
+    if (!trapArmed) return;
+    trapArmed = false;
+    if (state === 'play') { setPaused(true); $('pausedTag').classList.add('backed'); }
+  });
+  function onFullscreenChange() {
+    if (document.fullscreenElement || document.webkitFullscreenElement) wasFullscreen = true;
+  }
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
   // Switching apps or locking the phone pauses automatically.
   document.addEventListener('visibilitychange', function () { if (document.hidden) setPaused(true); });
 
@@ -405,6 +429,7 @@
 
   // Keyboard: arrows move a 2-wide cursor, space/Z swaps, X raises.
   window.addEventListener('keydown', function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;   // leave browser shortcuts (Alt+Left = Back) alone
     if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
       if (state === 'play' || state === 'paused') { setPaused(state === 'play'); e.preventDefault(); }
       return;
@@ -541,7 +566,7 @@
   }
 
   var usedKeyboard = false;
-  window.addEventListener('keydown', function () { usedKeyboard = true; });
+  window.addEventListener('keydown', function (e) { if (!e.altKey && !e.ctrlKey && !e.metaKey) usedKeyboard = true; });
   canvas.addEventListener('pointerdown', function () { usedKeyboard = false; });
 
   // Only touch the DOM when a number actually changes (cheap on old phones).
