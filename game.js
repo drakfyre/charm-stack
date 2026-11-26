@@ -399,7 +399,7 @@
     if (c.state === 'swap') vx -= c.dir * (c.t / T.swap);
     else if (c.state === 'fall') vy += Math.max(0, Math.min(1, c.t / T.fall));
     var px = boardX + vx * cell, py = boardBottom - (vy + 1) * cell - board.rise * cell;
-    if (board.danger > 0 && gy >= ROWS - 4) px += Math.sin(time * 50 + gx) * 2;
+    if (board.danger > 0 && gy >= ROWS - 3) px += Math.sin(time * 50 + gx) * 2;
     var col = COLORS[c.color], flash = 0, al = alphaMul, grow = hl ? 3 : 0;
     if (c.state === 'clear') {
       flash = 1;

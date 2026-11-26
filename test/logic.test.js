@@ -101,12 +101,12 @@ test('random play never corrupts the grid', function () {
   for (var g = 0; g < 20; g++) {
     var b = new Board({ rng: seeded(g + 100) });
     for (var i = 0; i < 60 * 60 && !b.over; i++) {
-      if (rng() < 0.3) b.swap(Math.floor(rng() * 6), Math.floor(rng() * 12), rng() < 0.5 ? -1 : 1);
+      if (rng() < 0.3) b.swap(Math.floor(rng() * 6), Math.floor(rng() * Board.ROWS), rng() < 0.5 ? -1 : 1);
       b.fast = rng() < 0.05;
       b.update(1 / 60);
       b.events.length = 0;
       var ids = {};
-      for (var y = 0; y < 12; y++) for (var x = 0; x < 6; x++) {
+      for (var y = 0; y < Board.ROWS; y++) for (var x = 0; x < Board.COLS; x++) {
         var c = b.grid[y][x];
         if (!c) continue;
         assert.ok(!ids[c.id], 'same cell twice in grid');

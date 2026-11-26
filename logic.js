@@ -2,7 +2,7 @@
 // Grid is grid[y][x], y = 0 is the bottom row. Written in plain ES5-ish JS for old Safari.
 (function (root) {
   'use strict';
-  var COLS = 6, ROWS = 12;
+  var COLS = 6, ROWS = 10;
   var T = { swap: 0.08, hang: 0.12, fall: 0.04, flash: 0.6, popEach: 0.06, danger: 3.0 };
   var nextId = 0;
 
@@ -31,7 +31,7 @@
     this.danger = 0;          // seconds the stack has been touching the top
     this.stop = 0;            // "stop time" after big combos/chains
     this.events = [];
-    if (!opts.empty) this.fill(opts.height || 6);
+    if (!opts.empty) this.fill(opts.height || 5);
     this.next = this.makeRow();
   }
   var P = Board.prototype;
