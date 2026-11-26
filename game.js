@@ -180,7 +180,30 @@
     cursor = { x: 2, y: 3 };
     state = 'play';
     $('over').classList.add('hidden');
+    showPaused(false);
   }
+
+  // ---------- Pause (the board stays visible on purpose: peeking is allowed!) ----------
+  var pauseBtn = $('pause');
+  function showPaused(on) {
+    pauseBtn.classList.toggle('paused', on);
+    pauseBtn.innerHTML = on ? '&#9654;' : '&#10074;&#10074;';
+    pauseBtn.setAttribute('aria-label', on ? 'Resume' : 'Pause');
+    $('pausedTag').classList.toggle('hidden', !on);
+  }
+  function setPaused(on) {
+    if (on && state === 'play') { state = 'paused'; for (var id in pointers) pointers[id].cell = null; }
+    else if (!on && state === 'paused') { state = 'play'; }
+    else return;
+    showPaused(state === 'paused');
+  }
+  pauseBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); });
+  pauseBtn.addEventListener('pointerup', function (e) {
+    e.preventDefault(); initAudio();
+    setPaused(state === 'play');
+  });
+  // Switching apps or locking the phone pauses automatically.
+  document.addEventListener('visibilitychange', function () { if (document.hidden) setPaused(true); });
 
   // ---------- Audio (starts on first tap, required by iOS) ----------
   var ac = null;
@@ -307,6 +330,11 @@
 
   // Keyboard: arrows move a 2-wide cursor, space/Z swaps, X raises.
   window.addEventListener('keydown', function (e) {
+    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+      if (state === 'play' || state === 'paused') { setPaused(state === 'play'); e.preventDefault(); }
+      return;
+    }
+    if (state === 'paused') return;
     if (state !== 'play') { if (e.key === 'Enter' || e.key === ' ') startPressed(e); return; }
     var k = e.key;
     if (k === 'ArrowLeft') cursor.x = Math.max(0, cursor.x - 1);
