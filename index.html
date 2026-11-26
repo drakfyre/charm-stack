@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Charm Stack">
-<meta name="theme-color" content="#1a0b2e">
+<meta name="theme-color" content="#0b3550">
 <title>Charm Stack</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -18,20 +18,21 @@
 <canvas id="c"></canvas>
 
 <div id="hud">
+  <button id="pause" aria-label="Pause">&#10074;&#10074;</button>
   <div class="stat"><span class="lbl">Score</span><span id="score">0</span></div>
   <div class="stat"><span class="lbl">Best</span><span id="best">0</span></div>
   <div class="stat"><span class="lbl">Level</span><span id="lvl">1</span></div>
   <div class="stat"><span class="lbl">Fingers</span><span id="touches">0</span></div>
 </div>
 
-<button id="pause" aria-label="Pause">&#10074;&#10074;</button>
-<button id="raise" aria-label="Raise the stack">▲ Raise</button>
+<div id="safeBottom"></div>
 <div id="pausedTag" class="hidden">Paused</div>
 
 <div id="start" class="overlay">
   <h1>Charm Stack</h1>
   <p>Drag a charm left or right to swap it with its neighbour.</p>
   <p>Line up <b>3 or more</b> of the same charm to clear them.</p>
+  <p><b>Swipe up</b> to bring up more charms.</p>
   <p>Don't let the stack reach the top!</p>
   <p class="small">Use as many fingers as you like. Keyboard: arrows, Space to swap, X to raise, P to pause.</p>
   <button id="play">Tap to Play</button>

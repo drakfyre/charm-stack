@@ -22,8 +22,9 @@
       this.grid.push(row);
     }
     this.rise = 0;            // 0..1 of a row
-    this.speed = opts.speed || 0.09; // rows per second
-    this.fast = false;
+    this.speed = opts.speed != null ? opts.speed : 0.09; // rows per second
+    this.fast = false;        // held raise (keyboard X)
+    this.raiseQueue = 0;      // rows asked for by swipes
     this.chain = 1;
     this.score = 0;
     this.time = 0;
@@ -115,6 +116,13 @@
     if (a) { a.state = 'swap'; a.t = T.swap; a.dir = dir; a.chain = false; }
     if (b) { b.state = 'swap'; b.t = T.swap; b.dir = -dir; b.chain = false; }
     this.events.push({ type: 'swap' });
+    return true;
+  };
+
+  // A swipe up: raise the stack by one more row, quickly. Up to 3 can be queued.
+  P.requestRaise = function () {
+    if (this.over || this.topFull()) return false;
+    this.raiseQueue = Math.min(this.raiseQueue + 1, 3);
     return true;
   };
 
@@ -249,20 +257,23 @@
       }
       if (this.stop > 0 && !clearing) this.stop -= dt;
       this.rise = Math.min(this.rise, 0.999);
+      this.raiseQueue = 0;
       return;
     }
     this.danger = 0;
     if (clearing) return;
-    if (this.stop > 0 && !this.fast) { this.stop -= dt; return; }
+    var fast = this.fast || this.raiseQueue > 0;
+    if (this.stop > 0 && !fast) { this.stop -= dt; return; }
     this.stop = 0;
-    this.rise += dt * (this.fast ? 8 : this.speed);
+    this.rise += dt * (fast ? 8 : this.speed);
     if (this.rise >= 1) {
       this.rise -= 1;
-      if (this.fast) this.rise = 0;
+      if (fast) this.rise = 0;
+      if (this.raiseQueue > 0) this.raiseQueue--;
       this.pushRow();
-      if (this.fast) this.score += 1;
+      if (fast) this.score += 1;
     }
-    this.speed = Math.min(0.7, this.speed + dt * 0.0015);
+    if (this.speed > 0) this.speed = Math.min(0.7, this.speed + dt * 0.0015);
   };
 
   Board.T = T;

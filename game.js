@@ -28,7 +28,7 @@
 
   var FS = [
     '#version 300 es',
-    'precision mediump float;',
+    'precision highp float;',
     'in vec2 v_uv; in vec2 v_size; in vec4 v_col; in vec4 v_par;',
     'uniform float u_time;',
     'out vec4 o;',
@@ -74,20 +74,53 @@
     '    vec2 p = uv * v_size * 0.5; float d = sdBox(p, v_size * 0.5 - 1.0, v_par.x);',
     '    float a = 1.0 - smoothstep(-1.0, 1.0, d);',
     '    float border = 1.0 - smoothstep(0.0, 1.5, abs(d + 2.0) - 1.5);',
-    '    o = vec4(mix(v_col.rgb, vec3(1.0, 0.62, 0.82) * (1.0 + v_par.w), border * 0.8), max(a * v_col.a, border));',
+    '    o = vec4(mix(v_col.rgb, mix(vec3(0.7, 0.95, 1.0), vec3(1.0, 0.4, 0.5), v_par.w), border * 0.8), max(a * v_col.a, border));',
     '  } else if (kind < 3.5) {',                             // square ring (keyboard cursor)
     '    vec2 p = uv * v_size * 0.5; float d = abs(sdBox(p, v_size * 0.5 - 4.0, 8.0)) - 2.5;',
     '    o = vec4(v_col.rgb, (1.0 - smoothstep(-1.0, 1.0, d)) * v_col.a);',
-    '  } else if (kind < 4.5) {',                             // background
-    '    float t = u_time * 0.15; vec2 q = uv * vec2(v_size.x / v_size.y, 1.0);',
-    '    vec3 col = mix(vec3(0.22, 0.08, 0.32), vec3(0.06, 0.03, 0.14), uv.y * 0.5 + 0.5);',
-    '    for (int i = 0; i < 4; i++) { float fi = float(i);',
-    '      vec2 c = vec2(sin(t * (1.0 + fi * 0.3) + fi * 2.1), cos(t * (0.8 + fi * 0.2) + fi * 1.3)) * 0.8;',
-    '      col += vec3(0.5, 0.15, 0.4) * 0.12 * smoothstep(0.9, 0.0, length(q - c)); }',
+    '  } else if (kind < 4.5) {',                             // underwater background
+    '    float t = u_time; vec2 q = uv * vec2(v_size.x / v_size.y, 1.0);',
+    '    float depth = uv.y * 0.5 + 0.5;',                     // 0 = surface, 1 = sea floor
+    '    vec3 col = mix(vec3(0.10, 0.55, 0.68), vec3(0.01, 0.10, 0.24), pow(depth, 0.8));',
+    '    float rays = pow(0.5 + 0.5 * sin(q.x * 4.0 - q.y * 1.2 + t * 0.35), 6.0)',
+    '      + 0.6 * pow(0.5 + 0.5 * sin(q.x * 7.0 + q.y * 0.8 - t * 0.25 + 1.7), 8.0);',
+    '    col += vec3(0.35, 0.6, 0.6) * rays * 0.18 * (1.0 - depth);',
+    '    vec2 p = q * 5.0;',                                   // caustics
+    '    for (int i = 1; i < 4; i++) { float fi = float(i);',
+    '      p += vec2(0.6 / fi * cos(fi * p.y + t * 0.9 + 0.3 * fi), 0.6 / fi * sin(fi * p.x + t * 0.7 + 0.5 * fi)); }',
+    '    float c = pow(0.5 + 0.5 * sin(p.x + p.y), 8.0);',
+    '    col += vec3(0.5, 0.85, 0.9) * c * 0.22 * (1.0 - depth * 0.7);',
+    '    float sandY = 0.86 + 0.025 * sin(q.x * 3.0) + 0.012 * sin(q.x * 9.0 + 1.0);',
+    '    float sand = smoothstep(sandY - 0.006, sandY + 0.006, depth);',
+    '    vec3 sandCol = vec3(0.86, 0.75, 0.54) * (0.8 + 0.08 * sin(q.x * 40.0 + depth * 70.0)) + c * 0.18;',
+    '    col = mix(col, sandCol * mix(0.85, 0.55, clamp((depth - sandY) / (1.0 - sandY), 0.0, 1.0)), sand);',
     '    o = vec4(col, 1.0);',
-    '  } else {',                                             // circle ring (touch marker)
+    '  } else if (kind < 5.5) {',                             // circle ring (touch marker)
     '    vec2 p = uv * v_size * 0.5; float d = abs(length(p) - v_size.x * 0.5 + 5.0) - 3.0;',
     '    o = vec4(v_col.rgb, (1.0 - smoothstep(-1.0, 1.0, d)) * v_col.a);',
+    '  } else if (kind < 6.5) {',                             // fish: v_par.x = facing (+1 right), v_par.w = wiggle phase
+    '    vec2 p = uv; p.x *= v_par.x;',
+    '    p.y += sin(u_time * 9.0 + v_par.w) * 0.12 * max(0.0, -p.x - 0.1);',
+    '    float body = (length((p - vec2(0.12, 0.0)) / vec2(0.62, 0.38)) - 1.0) * 0.38;',
+    '    float tx = -p.x - 0.42;',
+    '    float tail = max(abs(p.y) - (0.08 + tx * 0.9), max(-tx, tx - 0.5));',
+    '    float fin = max(length((p - vec2(0.05, -0.3)) / vec2(0.28, 0.2)) - 1.0, p.y + 0.25) * 0.2;',
+    '    float d = min(min(body, tail), fin); float aa = fwidth(d) + 0.002;',
+    '    float a = 1.0 - smoothstep(-aa, aa, d);',
+    '    vec3 col = v_col.rgb * (0.8 + 0.35 * smoothstep(0.35, -0.35, p.y));',
+    '    float onBody = 1.0 - smoothstep(-aa, aa, body);',
+    '    col = mix(col, vec3(1.0), 0.45 * onBody * smoothstep(0.08, 0.0, abs(p.x + 0.05)));',  // white band
+    '    col = mix(col, col * 0.7, 1.0 - onBody);',
+    '    float eye = length(p - vec2(0.45, -0.08));',
+    '    col = mix(col, vec3(1.0), 1.0 - smoothstep(0.085, 0.1, eye));',
+    '    col = mix(col, vec3(0.03), 1.0 - smoothstep(0.04, 0.055, eye));',
+    '    o = vec4(col, a * v_col.a);',
+    '  } else {',                                             // bubble
+    '    float r = length(uv);',
+    '    float ring = smoothstep(0.7, 0.92, r) * (1.0 - smoothstep(0.92, 1.0, r));',
+    '    float hl = 1.0 - smoothstep(0.0, 0.28, length(uv - vec2(-0.35, -0.35)));',
+    '    float a = max(ring * 0.75, hl * 0.9) + 0.1 * (1.0 - step(1.0, r));',
+    '    o = vec4(vec3(0.85, 0.97, 1.0), a * v_col.a);',
     '  }',
     '}'
   ].join('\n');
@@ -152,13 +185,58 @@
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     var top = $('hud').getBoundingClientRect().bottom + 6;
-    var bottom = H - $('raise').getBoundingClientRect().top + 10;
+    var bottom = $('safeBottom').offsetHeight + 14;
     cell = Math.floor(Math.min((W - 24) / COLS, (H - top - bottom) / ROWS));
     boardX = Math.round((W - cell * COLS) / 2);
     boardTop = Math.round(top + ((H - top - bottom) - cell * ROWS) / 2);
     boardBottom = boardTop + cell * ROWS;
   }
   window.addEventListener('resize', layout);
+
+  // ---------- Fish and bubbles (the background keeps swimming even while paused) ----------
+  var FISH_COLORS = [[1.0, 0.55, 0.15], [1.0, 0.85, 0.25], [1.0, 0.45, 0.7], [0.45, 0.85, 1.0], [0.7, 0.55, 1.0], [0.55, 0.95, 0.45]];
+  var fish = [], bubbles = [];
+  function newFish(f, anywhere) {
+    f = f || {};
+    f.dir = Math.random() < 0.5 ? 1 : -1;
+    f.size = 22 + Math.random() * 30;
+    f.speed = 18 + Math.random() * 30;
+    f.x = anywhere ? Math.random() * W : (f.dir > 0 ? -f.size * 2 : W + f.size * 2);
+    f.y = 70 + Math.random() * Math.max(50, H - 160);
+    f.col = FISH_COLORS[Math.floor(Math.random() * FISH_COLORS.length)];
+    f.phase = Math.random() * 6.28;
+    f.boost = 0;
+    return f;
+  }
+  function updateFish(dt) {
+    if (!fish.length && W) for (var i = 0; i < 8; i++) fish.push(newFish(null, true));
+    for (i = 0; i < fish.length; i++) {
+      var f = fish[i];
+      f.boost = Math.max(0, f.boost - dt * 1.5);
+      f.x += f.dir * f.speed * (1 + f.boost * 4) * dt;
+      f.y += Math.sin(time * 0.8 + f.phase) * 10 * dt;
+      f.phase += dt * f.boost * 12;          // tail wiggles faster when fleeing
+      if ((f.dir > 0 && f.x > W + f.size * 2) || (f.dir < 0 && f.x < -f.size * 2)) newFish(f, false);
+    }
+    if (Math.random() < dt * 2.5) spawnBubble(Math.random() * W, H + 10, 2 + Math.random() * 5);
+    for (i = bubbles.length - 1; i >= 0; i--) {
+      var b = bubbles[i];
+      b.age += dt;
+      b.y -= b.vy * dt;
+      b.x += Math.sin(b.age * 3 + b.wob) * 12 * dt;
+      if (b.y < -20) bubbles.splice(i, 1);
+    }
+  }
+  function spawnBubble(x, y, r) {
+    if (bubbles.length < 120) bubbles.push({ x: x, y: y, r: r, vy: 30 + r * 8 + Math.random() * 20, age: 0, wob: Math.random() * 6.28 });
+  }
+  // Fish near a clear dart away from it.
+  function scareFish(x, y, power) {
+    for (var i = 0; i < fish.length; i++) {
+      var f = fish[i], dx = f.x - x, dy = f.y - y;
+      if (dx * dx + dy * dy < 260 * 260) { f.dir = dx >= 0 ? 1 : -1; f.boost = Math.min(2, 0.8 + power); }
+    }
+  }
   window.addEventListener('orientationchange', function () { setTimeout(layout, 300); });
 
   // ---------- Game state ----------
@@ -277,7 +355,7 @@
   canvas.addEventListener('pointerdown', function (e) {
     e.preventDefault();
     initAudio();
-    var p = { x: e.clientX, y: e.clientY, cell: null, tx: 0 };
+    var p = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, cell: null, tx: 0, swiped: false };
     pointers[e.pointerId] = p;
     try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
     if (state !== 'play') return;
@@ -291,6 +369,16 @@
     e.preventDefault();
     p.x = e.clientX; p.y = e.clientY;
     p.tx = Math.max(0, Math.min(COLS - 1, Math.floor((e.clientX - boardX) / cell)));
+    // A big upward swipe raises the stack one row; keep sliding up for more rows.
+    var up = p.sy - e.clientY, side = Math.abs(e.clientX - p.sx);
+    if (state === 'play' && up > cell * 1.5 && up > side * 1.5) {
+      p.swiped = true; p.cell = null;
+      p.sy = e.clientY; p.sx = e.clientX;
+      if (board.requestRaise()) {
+        beep(300, 0.18, 'sine', 0.08); beep(450, 0.15, 'sine', 0.06, 0.06);
+        for (var k = 0; k < 6; k++) spawnBubble(e.clientX + (Math.random() - 0.5) * 40, e.clientY + Math.random() * 30, 3 + Math.random() * 5);
+      }
+    }
   });
   function release(e) { delete pointers[e.pointerId]; }
   canvas.addEventListener('pointerup', release);
@@ -309,19 +397,6 @@
       }
     }
   }
-
-  // Raise button: hold to speed the stack up (each finger counted separately).
-  var raisePointers = {};
-  var raiseBtn = $('raise');
-  function raiseHeld() { for (var k in raisePointers) return true; return false; }
-  raiseBtn.addEventListener('pointerdown', function (e) {
-    e.preventDefault(); initAudio();
-    raisePointers[e.pointerId] = 1; raiseBtn.classList.add('held');
-    try { raiseBtn.setPointerCapture(e.pointerId); } catch (err) {}
-  });
-  function raiseUp(e) { delete raisePointers[e.pointerId]; if (!raiseHeld()) raiseBtn.classList.remove('held'); }
-  raiseBtn.addEventListener('pointerup', raiseUp);
-  raiseBtn.addEventListener('pointercancel', raiseUp);
 
   // Block iOS page zoom / scroll gestures.
   document.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
@@ -367,6 +442,7 @@
         var semis = [0, 4, 7, 12, 16, 19, 24];
         beep(523.25 * Math.pow(2, semis[Math.min(e.chain - 1, 6)] / 12), 0.25, 'sine', 0.14);
         var c = cellCenter(e.x, e.y);
+        scareFish(c.x, c.y, e.chain - 1 + (e.count > 3 ? 0.5 : 0));
         if (e.chain > 1) popup('Chain ×' + e.chain + '!', c.x, c.y);
         else if (e.count > 3) popup(e.count + ' Combo!', c.x, c.y);
       } else if (e.type === 'pop') {
@@ -376,6 +452,7 @@
           particles.push({ x: p.x, y: p.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 80,
             life: 0.5 + Math.random() * 0.4, age: 0, size: cell * (0.15 + Math.random() * 0.2), col: col });
         }
+        for (k = 0; k < 2; k++) spawnBubble(p.x + (Math.random() - 0.5) * cell * 0.6, p.y, 2 + Math.random() * 4);
         beep(880 + Math.random() * 300, 0.07, 'square', 0.03);
       } else if (e.type === 'push') {
         if (cursor.y < ROWS - 1) cursor.y++;
@@ -413,14 +490,22 @@
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniform2f(uRes, W, H);
     gl.uniform1f(uTime, time);
-    gl.clearColor(0.1, 0.04, 0.18, 1);
+    gl.clearColor(0.02, 0.15, 0.25, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     var danger = board ? Math.min(1, board.danger / T.danger) : 0;
     quad(0, 0, W, H, 0, 0, 0, 1, 0, 0, 4, 0);
     var pulse = danger > 0 ? 0.5 + 0.5 * Math.sin(time * 12) : 0;
+    for (var f = 0; f < fish.length; f++) {
+      var fi = fish[f], fw = fi.size * 1.6;
+      quad(fi.x - fw / 2, fi.y - fi.size / 2, fw, fi.size, fi.col[0], fi.col[1], fi.col[2], 0.9, fi.dir, 0, 6, fi.phase);
+    }
+    for (var bi = 0; bi < bubbles.length; bi++) {
+      var bb = bubbles[bi];
+      quad(bb.x - bb.r, bb.y - bb.r, bb.r * 2, bb.r * 2, 1, 1, 1, 0.7, 0, 0, 7, 0);
+    }
     quad(boardX - 8, boardTop - 8, cell * COLS + 16, cell * ROWS + 16,
-      0.05 + 0.4 * danger * pulse, 0.02, 0.09, 0.75, 12, 0, 2, danger * pulse);
+      0.01 + 0.4 * danger * pulse, 0.05, 0.13, 0.62, 12, 0, 2, danger * pulse);
     flush();
 
     if (board) {
@@ -470,7 +555,7 @@
     last = now; time += dt;
     if (board && state === 'play') {
       stepDrags();
-      board.fast = raiseHeld() || keyRaise;
+      board.fast = keyRaise;
       board.update(dt);
       handleEvents();
       setText('score', board.score);
@@ -478,6 +563,7 @@
       if (board.score > best) setText('best', board.score);
     }
     setText('touches', activeCount());
+    updateFish(dt);
     for (var i = particles.length - 1; i >= 0; i--) {
       var p = particles[i];
       p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 500 * dt;

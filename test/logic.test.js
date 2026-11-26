@@ -118,4 +118,27 @@ test('random play never corrupts the grid', function () {
   }
 });
 
+test('each swipe raise brings up exactly one row quickly, then normal speed resumes', function () {
+  var b = new Board({ rng: seeded(3), speed: 0 });
+  var pushes = 0;
+  function tick(secs) { for (var t = 0; t < secs; t += 1 / 60) { b.update(1 / 60); b.events.forEach(function (e) { if (e.type === 'push') pushes++; }); b.events.length = 0; } }
+  tick(1);
+  assert.strictEqual(pushes, 0, 'speed 0: nothing rises on its own');
+  assert.ok(b.requestRaise()); assert.ok(b.requestRaise());
+  tick(1);
+  assert.strictEqual(pushes, 2);
+  assert.strictEqual(b.raiseQueue, 0);
+  assert.strictEqual(b.rise, 0);
+  tick(2);
+  assert.strictEqual(pushes, 2, 'stops after the requested rows');
+});
+
+test('swipe raises are refused when the stack touches the top', function () {
+  var b = new Board({ empty: true, speed: 0 });
+  b.grid[b.rows - 1][0] = cell(0);
+  for (var y = 0; y < b.rows - 1; y++) b.grid[y][0] = cell(y % 2 ? 1 : 2);
+  assert.ok(!b.requestRaise());
+  assert.strictEqual(b.raiseQueue, 0);
+});
+
 console.log(passed + ' tests passed');
