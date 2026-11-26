@@ -12,7 +12,7 @@ Built to run on older iPhones (iPhone 7 Plus, iOS 15 / Safari 15) as well as any
 - Hold **▲ Raise** to bring up new charms faster. Don't let the stack reach the top!
 - Several fingers can drag different charms at the same time.
 - **❚❚ Pause** (bottom left, or P / Esc) freezes the game but keeps the board visible, so you can plan your next move. Switching apps pauses automatically.
-- Keyboard: arrow keys move the cursor, Space/Z swaps, X raises., P pauses.
+- Keyboard: arrow keys move the cursor, Space/Z swaps, X raises, P pauses.
 
 On iPhone, use **Share → Add to Home Screen** to play full screen. On Android, the game goes full screen when you tap Play.
 
